@@ -14,6 +14,9 @@ import java.util.ArrayList;
 import java.util.Scanner;
 import static net.lanbahn.lanbahnusbcontrol.LanbahnUSBControl.DEBUG;
 
+
+import static net.lanbahn.lanbahnusbcontrol.LanbahnUSBControl.*;
+
 /**
  * Test program for lanbahn-usb-0.1 control using pi4j lib
  *
@@ -64,9 +67,8 @@ public class AccessoryDecoder {
         if ((ready == false) && (cmd.charAt(0) == 'A')) {
             ready = parseAnnounceString(cmd);
         } else if (cmd.charAt(0) == 'F') {
-            //TODO
-            // send feedback to network
-
+            // send all feeback messages back to lanbahn UDP multicast
+            txMessageQueue.offer(cmd);  // 
         }
     }
 
@@ -85,6 +87,26 @@ public class AccessoryDecoder {
             return false;
         }
     }
+    
+    public boolean sendMessage(String s) {
+        // send only "set" messages
+        String msgParts[] = s.toUpperCase().split(" ");
+        if (msgParts.length != 3) return false;
+        if (msgParts[0].equals("SET") || msgParts[0].equals("READ")) {
+            int a = Integer.parseInt(msgParts[1]);
+            if (this.hasAddress(a)) {
+               usbport.writeln(s);
+               if (DEBUG) {
+                  System.out.println("sent: " + s);
+               }
+               return true;
+            } else {
+               return false;
+            }
+        }
+        return false;
+    }
+
 
     public boolean hasAddress(int a) {
         if (addresses.contains(a)) {
