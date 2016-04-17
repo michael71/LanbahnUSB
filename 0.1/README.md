@@ -8,3 +8,5 @@ Control is via ASCII commands - the protocol is a subset of the, see <a href="ht
 Published in the MERG journal June/2016.
 
 Author: Michael Blank
+
+<img src="lanbahn-usb-0.1.png" />
