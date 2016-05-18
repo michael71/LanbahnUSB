@@ -40,7 +40,7 @@ public class LanbahnUSBControl {
     
     public static Queue<String> rxMessageQueue = new LinkedList<String>();
     public static Queue<String> txMessageQueue = new LinkedList<String>();
-    public static final String VERSION = "0.1 - 16 April 2016";
+    public static final String VERSION = "0.2 - 18 Mai 2016";
     public static final int INVALID_INT = -1;
 
     private static Timer timer;
@@ -130,6 +130,7 @@ public class LanbahnUSBControl {
         } */
         
         while(true) {
+            Thread.sleep(100);
             ; // endless loop
         }
                 
