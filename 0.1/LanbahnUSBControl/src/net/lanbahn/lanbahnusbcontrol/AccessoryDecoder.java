@@ -25,9 +25,6 @@ import com.pi4j.io.serial.SerialDataListener;
 import com.pi4j.io.serial.SerialFactory;
 import com.pi4j.io.serial.SerialPortException;
 import java.util.ArrayList;
-import java.util.Scanner;
-import static net.lanbahn.lanbahnusbcontrol.LanbahnUSBControl.DEBUG;
-
 
 import static net.lanbahn.lanbahnusbcontrol.LanbahnUSBControl.*;
 
