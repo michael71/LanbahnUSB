@@ -95,7 +95,7 @@ public class Lanbahn {
 
     public void stop() {
         running = false;
-        t.stop();  // TODO
+        t.interrupt();    // preferred over t.stop() which is deprecated.
     }
 
     void send(String msg) {
@@ -136,7 +136,8 @@ public class Lanbahn {
                 byte[] bytes = new byte[65536];
                 DatagramPacket packet = new DatagramPacket(bytes, bytes.length);
 
-                while (running) {
+                
+                while (!Thread.currentThread().isInterrupted()) {
                     // Warten auf Nachricht
                     multicastsocket.receive(packet);   //TODO check timeout 
                     // TODO to be able to interrupt thread

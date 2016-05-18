@@ -24,20 +24,21 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Queue;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.swing.Timer;
 
 /**
- * Test program for lanbahn-usb-0.1 control
- * using pi4j lib
- * 
+ * Test program for lanbahn-usb-0.1 control using pi4j lib
+ *
  * @author Michael Blank
  */
-
 public class LanbahnUSBControl {
+
     static ArrayList<AccessoryDecoder> decoders = new ArrayList();
     static ArrayList<Integer> addresses = new ArrayList();
-    
+
     public static Queue<String> rxMessageQueue = new LinkedList<String>();
     public static Queue<String> txMessageQueue = new LinkedList<String>();
     public static final String VERSION = "0.2 - 18 Mai 2016";
@@ -45,18 +46,19 @@ public class LanbahnUSBControl {
 
     private static Timer timer;
     private static Lanbahn lanbahn;
-    
+
     static boolean DEBUG = true;
-    
-     private static void printAddressList(ArrayList<Integer> a) {
-         System.out.print("addresses=");
-         for( Integer addr:a) {
-             System.out.print(addr+" ");         
-         }
-         System.out.println();
-     }
+
+    private static void printAddressList(ArrayList<Integer> a) {
+        System.out.print("addresses=");
+        for (Integer addr : a) {
+            System.out.print(addr + " ");
+        }
+        System.out.println();
+    }
+
     @SuppressWarnings("SleepWhileInLoop")
-     public static void main(String args[]) throws InterruptedException {
+    public static void main(String args[]) {
         final int MAX_DEVICES = 10;
         initTimer();
         lanbahn = new Lanbahn();
@@ -66,43 +68,56 @@ public class LanbahnUSBControl {
             System.out.println("ERROR: Could not init lanbahn class.");
             System.exit(1);
         }
-        
-        String device ="";
-        for (int i= 0; i <MAX_DEVICES; i++) {
-            device  = "/dev/ttyACM"+i;
+
+        String device = "";
+        for (int i = 0; i < MAX_DEVICES; i++) {
+            device = "/dev/ttyACM" + i;
             AccessoryDecoder accDec = new AccessoryDecoder(device);
-            if (accDec.usbport.isOpen() ) {
-               System.out.println("lanbahn-usb at "+device);
-               decoders.add(accDec);
+            if (accDec.usbport.isOpen()) {
+                System.out.println("lanbahn-usb at " + device);
+                decoders.add(accDec);
             } else {
-               System.out.println("NO lanbahn-usb at "+device);
+                System.out.println("NO lanbahn-usb at " + device);
             }
-            Thread.sleep(100);
+            try {
+                Thread.sleep(100);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(LanbahnUSBControl.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
-        
-        
-        if (DEBUG)  System.out.println("waiting for decoders IDs");
-        
+
+        if (DEBUG) {
+            System.out.println("waiting for decoders IDs");
+        }
+
         long t = System.currentTimeMillis();
-        while ((System.currentTimeMillis() -t) < 3000) {
-            // wait 3 secs for decoders 'A' response
-            Thread.sleep(100);
+        while ((System.currentTimeMillis() - t) < 3000) {
+            try {
+                // wait 3 secs for decoders 'A' response
+                Thread.sleep(100);
+            } catch (InterruptedException ex) {
+                Logger.getLogger(LanbahnUSBControl.class.getName()).log(Level.SEVERE, null, ex);
+            }
         }
-        
+
         Iterator<AccessoryDecoder> i = decoders.iterator();
         while (i.hasNext()) {
             AccessoryDecoder dec = i.next(); // must be called before you can call i.remove()
-            if (!dec.isReady()) i.remove(); 
+            if (!dec.isReady()) {
+                i.remove();
+            }
         }
 
-        System.out.println(decoders.size()+ " accessory decoders found");
-        
+        System.out.println(decoders.size() + " accessory decoders found");
+
         // store all valid addresses
-        for (AccessoryDecoder dec:decoders) {
+        for (AccessoryDecoder dec : decoders) {
             addresses.addAll(dec.getAllAddresses());
         }
-        if (DEBUG) printAddressList(addresses);
-        
+        if (DEBUG) {
+            printAddressList(addresses);
+        }
+
         /* int count = 0;
         int[]  muster = {0, 1, 0, 2, 0, 0};
         
@@ -128,20 +143,27 @@ public class LanbahnUSBControl {
             }
             Thread.sleep(3000);
         } */
-        
-        while(true) {
-            Thread.sleep(100);  // =reduces CPU usage from 100 to 30% on Rasp.A
-            ; // endless loop
+        try {
+            while (true) {
+
+                Thread.sleep(100); // =reduces CPU usage from 100 to 30% on Rasp.A
+
+                ; // endless loop
+            }
+        } catch (InterruptedException ex) {
+            Logger.getLogger(LanbahnUSBControl.class.getName()).log(Level.SEVERE, null, ex);
         }
-                
-     }  
-     
-     private static void sendToDecoder(String msg) {
-         for (AccessoryDecoder dec:decoders) {
-             dec.sendMessage(msg);
-         }
-     }
-     
+        System.out.println("interrupted. program ends."); // this does not seem to work as expected TODO: use shutdownHook instead.
+        lanbahn.stop();  // stop lanbahn thread
+
+    }
+
+    private static void sendToDecoder(String msg) {
+        for (AccessoryDecoder dec : decoders) {
+            dec.sendMessage(msg);
+        }
+    }
+
     private static void initTimer() {
         timer = new Timer(100, new ActionListener() {
             public void actionPerformed(ActionEvent e) {
@@ -161,7 +183,7 @@ public class LanbahnUSBControl {
     }
 
     private static void interpret(String msg) {
-        if  (msg.length() > 40) {
+        if (msg.length() > 40) {
             return; // too long to send to XBEE
         }
         // todo remove whitespaces
