@@ -146,7 +146,7 @@ public class LanbahnUSBControl {
         try {
             while (true) {
 
-                Thread.sleep(100); // =reduces CPU usage from 100 to 30% on Rasp.A
+                Thread.sleep(1000); // =reduces CPU usage from 100 to 30% on Rasp.A
 
                 ; // endless loop
             }

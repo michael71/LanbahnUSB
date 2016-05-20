@@ -68,7 +68,11 @@ public class Lanbahn {
                 multicastsocket = new MulticastSocket(LANBAHN_PORT);
                 mgroup = InetAddress.getByName(LANBAHN_GROUP);
                 multicastsocket.joinGroup(mgroup);
-                //multicastsocket.setLoopbackMode(true); //yes, disable receive of own messages
+                multicastsocket.setLoopbackMode(false);
+                    // true = disable receive of own messages
+                    // false = receive own messages
+                    // MUST be set to false to be able to receive messages from
+                    // other programs on the same computer like Java Panel !!!
                 // s = new ServerSocket(SXNET_PORT,0,myip.get(0));
                 // only listen on 1 address on multi homed systems
                 System.out.println("new lanbahn multicast socket "
@@ -111,6 +115,9 @@ public class Lanbahn {
 
         System.out.println("sending to lanbahn " + msg);
         try {
+             //  setNetworkInterface(NetworkInterface netIf)
+             //            throws SocketException
+             //Specify the network interface for OUTGOING multicast datagrams sent on this socket.
             multicastsocket.send(packet);
         } catch (IOException ex) {
             System.out.println("ERROR when sending to lanbahn " + ex.getMessage());
