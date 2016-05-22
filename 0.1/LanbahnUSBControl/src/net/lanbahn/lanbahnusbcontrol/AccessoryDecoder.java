@@ -16,7 +16,6 @@
  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
  */
-
 package net.lanbahn.lanbahnusbcontrol;
 
 import com.pi4j.io.serial.Serial;
@@ -31,13 +30,21 @@ import static net.lanbahn.lanbahnusbcontrol.LanbahnUSBControl.*;
 /**
  * Test program for lanbahn-usb-0.1 control using pi4j lib
  *
+ * An accessory decoder is attached to an USB port. Lanbahn "SET" or "READ"
+ * messages are forwarded to the USB port, if the address matches
+ *
+ * Feedback messages ("F ..." or "FB ...." or "FS ...." ) are received at the
+ * USB port and forwarded to the LANBAHN network (added to sendQueue)
+ *
  * @author Michael Blank
  */
 public class AccessoryDecoder {
 
     public Serial usbport = SerialFactory.createInstance();
     private ArrayList<Integer> addresses = new ArrayList();
-    private boolean ready = false;
+    private boolean ready;  
+    // = ready when successfully parsed arduino announce string, i.e. when 
+    //   we have stored all the addresses of the decoder
 
     AccessoryDecoder(String dev) {
         usbport.addListener(new SerialDataListener() {
@@ -45,14 +52,15 @@ public class AccessoryDecoder {
             @Override
             public void dataReceived(SerialDataEvent event) {
                 String input = event.getData().toUpperCase();
-                String[] lines = input.split("\n");  // in case arduino sent
-                // multiple feedbacks
+                String[] lines = input.split("\n");  // in case the arduino has
+                // sent multiple feedbacks
                 for (String line : lines) {
-                    parseCommand(line);
+                    parseReceivedCommand(line);
                 }
             }
         });
 
+        ready = false;
         // try to open the serial port and try to get arduino ID string
         try {
             usbport.open(dev, 57600);
@@ -61,11 +69,17 @@ public class AccessoryDecoder {
 
         } catch (SerialPortException ex) {
             //System.out.println("Error: " + ex.getMessage());
+            // ignore - we will identify a connection by reading announce string
         }
 
     }
 
-    private void parseCommand(String cmd) {
+    /**
+     * interpret commands received from the arduino (via USB)
+     *
+     * @param cmd
+     */
+    private void parseReceivedCommand(String cmd) {
         // accept only strings starting with a character A..Z
         // and ending with "\n"
 
@@ -75,9 +89,10 @@ public class AccessoryDecoder {
         if (cmd.length() < 3) {
             return;
         }
-        if ((ready == false) && (cmd.charAt(0) == 'A')) {
+        if ((ready == false) && (cmd.charAt(0) == 'A')) {  // startup behaviour
             ready = parseAnnounceString(cmd);
-        } else if (cmd.charAt(0) == 'F') {
+        }
+        if (cmd.charAt(0) == 'F') {  // feedback message received
             // send all feeback messages back to lanbahn UDP multicast
             txMessageQueue.offer(cmd);  // 
         }
@@ -88,36 +103,37 @@ public class AccessoryDecoder {
     }
 
     public boolean set(int a, int val) {
-        if (this.hasAddress(a)) {
+        if (this.hasAddress(a)) {  // "doublecheck"
             usbport.writeln("SET " + a + " " + val);
-            if (DEBUG) {
-                System.out.println("sent: SET " + a + " " + val);
+            if (DEBUG_USB) {
+                System.out.println("sent to usb: SET " + a + " " + val);
             }
             return true;
         } else {
             return false;
         }
     }
-    
+
     public boolean sendMessage(String s) {
-        // send only "set" messages
+        // send only valid and matching messages to usbport
         String msgParts[] = s.toUpperCase().split(" ");
-        if (msgParts.length != 3) return false;
-        if (msgParts[0].equals("SET") || msgParts[0].equals("READ")) {
+        if (msgParts.length < 2) return false;
+        
+        if ((msgParts[0].equals("SET") && (msgParts.length == 3))
+                || (msgParts[0].equals("READ") && (msgParts.length == 2))) {
             int a = Integer.parseInt(msgParts[1]);
-            if (this.hasAddress(a)) {
-               usbport.writeln(s);
-               if (DEBUG) {
-                  System.out.println("sent: " + s);
-               }
-               return true;
+            if (this.hasAddress(a)) {  // check if we have an address match
+                usbport.writeln(s);
+                if (DEBUG_USB) {
+                     System.out.println("sent to usb: " + s);
+                }
+                return true;
             } else {
-               return false;
+                return false;
             }
         }
         return false;
     }
-
 
     public boolean hasAddress(int a) {
         if (addresses.contains(a)) {
@@ -135,7 +151,7 @@ public class AccessoryDecoder {
 
         boolean success = false;
         String[] parsed = s.split(" ");
-        System.out.println("parsing announce string");
+        if (DEBUG) System.out.println("parsing announce string");
         for (int i = 1; i < parsed.length; i++) {
             String[] p2 = parsed[i].split(":");
             if (p2.length == 2) {
@@ -144,9 +160,9 @@ public class AccessoryDecoder {
                 try {
                     addr = Integer.parseInt(p2[0]);
                     if (!addresses.contains(addr)) {
-                        if (DEBUG) {
-                            System.out.println("adding " + addr);
-                        }
+                        //if (DEBUG) {
+                        //    System.out.println("adding " + addr);
+                        //}
                         addresses.add(addr);
                         success = true;
                     }

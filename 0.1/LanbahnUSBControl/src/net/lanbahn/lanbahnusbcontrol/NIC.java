@@ -22,9 +22,11 @@ package net.lanbahn.lanbahnusbcontrol;
 import java.net.*;
 import java.util.*;
 
+import static net.lanbahn.lanbahnusbcontrol.LanbahnUSBControl.DEBUG;
+
 class NIC {
 
-	public static List<InetAddress> getmyip() {
+	public static List<InetAddress> getmyip(String ifname) {
 
 		List<InetAddress> addrList = new ArrayList<InetAddress>();
 		Enumeration<NetworkInterface> interfaces = null;
@@ -35,29 +37,36 @@ class NIC {
                         return null;
 		}
 
-		InetAddress localhost = null;
-
-		try {
-			localhost = InetAddress.getByName("127.0.0.1");
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-                        return null;
-		}
-
+		
 		while (interfaces.hasMoreElements()) {
 			NetworkInterface ifc = interfaces.nextElement();
 			Enumeration<InetAddress> addressesOfAnInterface = ifc.getInetAddresses();
 
 			while (addressesOfAnInterface.hasMoreElements()) {
 				InetAddress address = addressesOfAnInterface.nextElement();
-                // look for IPv4 addresses which are not==127.0.0.1
-				if (!address.equals(localhost) && !address.toString().contains(":")) {
-					addrList.add(address);
-				//	System.out.println("FOUND ADDRESS ON NIC: " + address.getHostAddress());
-
-				}
+                                // look for IPv4 addresses which are not local
+                                String sAddr = address.getHostAddress();
+                                // check if addess is IPv4 and is not the local addr 127....
+                               
+				if (!sAddr.contains(":") && !sAddr.startsWith("127")) {
+                                    if (ifname.length() == 0) {
+                                        // return all ipv4 addresses    
+                                        addrList.add(address);
+                                    } else {  
+                                        //use only matching interface
+                                        if (ifc.getName().equals(ifname)) {
+                                            addrList.add(address);   
+                                        }
+                                    }
+    				}
 			}
 		}
+                if (DEBUG) {
+                    System.out.println("filter="+ifname + " ");
+                    for (InetAddress a:addrList) {
+                        System.out.println("addr=" + a.getHostAddress());
+                    }
+                }
 		return addrList;
 	}
 }
